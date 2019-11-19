@@ -1,84 +1,86 @@
-class Message
-  attr_accessor :global_num, :name, :data
+module Fitreader
+  class Message
+    attr_accessor :global_num, :name, :data
 
-  def initialize(definitions)
-    @global_num = definitions[0]
-    @name = Sdk.message(@global_num)
-    return unless @name
+    def initialize(definitions)
+      @global_num = definitions[0]
+      @name = Fitreader::Sdk.message(@global_num)
+      return unless @name
 
-    fd = Sdk.fields(@global_num)
-    @data = definitions[1].map { |x| make_message(x, fd) }.flatten
-  end
-
-  private
-
-  def make_message(definition, fields)
-    return if definition.valid.nil?
-    definition.valid.map do |d|
-      sdk_fields = d.select { |k, v| fields.has_key?(k) }
-      h = Hash[sdk_fields.map { |k, v| process_value(fields[k], v.raw) }]
-      case @global_num
-      when 21
-        h = process_event(h)
-      when 0, 23
-        h = process_deviceinfo(h)
-      end
-      dev_fields = Hash[d.select { |k, v| k.is_a?(Symbol) }.map {|k,v| [k, v.raw]}]
-      h.merge(dev_fields)
-    end
-  end
-
-  def process_value(type, val)
-    if type[:type][0..3].to_sym == :enum
-      val = Sdk.enum(type[:type])[val]
-    elsif type[:type] == :date_time
-      t = Time.new(1989, 12, 31, 0, 0, 0, '+00:00').utc.to_i
-      val Time.at(val + t).utc
-    elsif type[:type] == :local_date_time
-      t = Time.new(1989, 12, 31, 0, 0, 0, '+02:00').utc.to_i
-      val = Time.at(val + t)
-    elsif type[:type] == :coordinates
-      val *= (180.0 / 2**31)
+      fd = Fitreader::Sdk.fields(@global_num)
+      @data = definitions[1].map { |x| make_message(x, fd) }.flatten
     end
 
-    unless type[:scale].zero?
-      if val.is_a? Array
-        val = val.map { |x| (x * 1.0) / type[:scale] }
-      else
-        val = (val * 1.0) / type[:scale]
+    private
+
+    def make_message(definition, fields)
+      return if definition.valid.nil?
+      definition.valid.map do |d|
+        sdk_fields = d.select { |k, v| fields.has_key?(k) }
+        h = Hash[sdk_fields.map { |k, v| process_value(fields[k], v.raw) }]
+        case @global_num
+        when 21
+          h = process_event(h)
+        when 0, 23
+          h = process_deviceinfo(h)
+        end
+        dev_fields = Hash[d.select { |k, v| k.is_a?(Symbol) }.map { |k, v| [k, v.raw] }]
+        h.merge(dev_fields)
       end
     end
 
-    unless type[:offset].zero?
-      if val.is_a? Array
-        val.map { |x| x - type[:offset] }
-      else
-        val - type[:offset]
+    def process_value(type, val)
+      if type[:type][0..3].to_sym == :enum
+        val = Fitreader::Sdk.enum(type[:type])[val]
+      elsif type[:type] == :date_time
+        t = Time.new(1989, 12, 31, 0, 0, 0, '+00:00').utc.to_i
+        val = Time.at(val + t).utc
+      elsif type[:type] == :local_date_time
+        t = Time.new(1989, 12, 31, 0, 0, 0, '+02:00').utc.to_i
+        val = Time.at(val + t)
+      elsif type[:type] == :coordinates
+        val *= (180.0 / 2 ** 31)
       end
-    end
-    [type[:name], val]
-  rescue => e
-    puts e
-  end
 
-  def process_event(h)
-    case h[:event]
-    when :rear_gear_change, :front_gear_change
-      h[:data] = Array(h[:data]).pack('V*').unpack('C*')
-    end
-    h
-  end
+      unless type[:scale].zero?
+        if val.is_a? Array
+          val = val.map { |x| (x * 1.0) / type[:scale] }
+        else
+          val = (val * 1.0) / type[:scale]
+        end
+      end
 
-  def process_deviceinfo(h)
-    case h[:source_type]
-    when :antplus
-      h[:device_type] = Sdk.enum(:antplus_device_type)[h[:value]]
+      unless type[:offset].zero?
+        if val.is_a? Array
+          val.map { |x| x - type[:offset] }
+        else
+          val - type[:offset]
+        end
+      end
+      [type[:name], val]
+    rescue => e
+      puts e
     end
 
-    case h[:manufacturer]
-    when :garmin, :dynastream, :dynastream_oem
-      h[:garmin_product] = Sdk.enum(:enum_garmin_product)[h[:garmin_product]]
+    def process_event(h)
+      case h[:event]
+      when :rear_gear_change, :front_gear_change
+        h[:data] = Array(h[:data]).pack('V*').unpack('C*')
+      end
+      h
     end
-    h
+
+    def process_deviceinfo(h)
+      case h[:source_type]
+      when :antplus
+        h[:device_type] = Fitreader::Sdk.enum(:antplus_device_type)[h[:value]]
+      end
+
+      case h[:manufacturer]
+      when :garmin, :dynastream, :dynastream_oem
+        h[:garmin_product] = Fitreader::Sdk.enum(:enum_garmin_product)[h[:garmin_product]]
+      end
+      h
+    end
   end
 end

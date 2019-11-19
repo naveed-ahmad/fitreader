@@ -16,7 +16,7 @@ Benchmark.ips do |x|
   # introduces incorrectable errors.
   x.report("single_run") do |times|
     f = File.open(p, "r")
-    Fit.new f
+    Fitreader::Fit.new f
   end
 
   # Compare the iterations per second of the various reports!

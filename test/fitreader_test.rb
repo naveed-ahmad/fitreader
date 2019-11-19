@@ -8,7 +8,7 @@ class FitreaderTest < Minitest::Test
   def test_reads_a_garmin_file
     path = "test/files/working_garmin.fit"
     file = File.open(path, "r")
-    fit = Fit.new file
+    fit = Fitreader::Fit.new file
     digest = {file_id: 1,
               file_creator: 1,
               device_settings: 1,
@@ -31,7 +31,7 @@ class FitreaderTest < Minitest::Test
   def test_reads_a_wahoo_file
     path = "test/files/working_wahoo.fit"
     file = File.open(path, "r")
-    fit = Fit.new file
+    fit = Fitreader::Fit.new file
     digest = {file_id: 1,
               event: 12,
               device_info: 10,
@@ -48,7 +48,7 @@ class FitreaderTest < Minitest::Test
   def test_reads_a_wahoo_file_with_dev_fields
     path = "test/files/working_wahoo_dev_fields.fit"
     file = File.open(path, "r")
-    fit = Fit.new file
+    fit = Fitreader::Fit.new file
     digest = {file_id: 1,
               developer_data_id: 1,
               field_description: 1,

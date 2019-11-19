@@ -1,3 +1,4 @@
+module Fitreader
 class RecordHeader < FitObject
   attr_accessor :header_type, :message_type, :message_type_specific, :local_message_type, :time_offset
 
@@ -30,5 +31,6 @@ class RecordHeader < FitObject
 
   def timestamp?
     @header_type == 1
+  end
   end
 end
